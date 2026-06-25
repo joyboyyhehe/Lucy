@@ -56,3 +56,6 @@ ui-debug.log
 # System Files
 .DS_Store
 Thumbs.db
+
+# Local model weights for TTS/STT
+Lucy_workspace/voice_models/

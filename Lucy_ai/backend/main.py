@@ -1,19 +1,28 @@
 import os
-from fastapi import FastAPI, HTTPException
+import logging
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+load_dotenv(override=True)
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("lucy.main")
+
+# Import brain query and voice speak engines
+from lucy.brain import query_brain
+from lucy.voice import speak
 
 app = FastAPI(title="Lucy AI Backend", version="1.0.0")
 
-# CORS middleware configuration
-# Tauri app in dev mode typically runs on localhost (e.g. http://localhost:1420 or http://tauri.localhost)
+# Configure CORS
+# Tauri apps run on tauri.localhost or localhost:1420
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for dev setup; lock down in production
+    allow_origins=["*"],  # Allow all for development; restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -22,10 +31,15 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
     session_id: str | None = None
+    voice_enabled: bool | None = True
 
 class ChatResponse(BaseModel):
     response: str
     session_id: str
+
+class SpeakRequest(BaseModel):
+    text: str
+    voice: str | None = "bf_isabella"
 
 @app.get("/")
 async def health_check():
@@ -36,19 +50,32 @@ async def health_check():
     }
 
 @app.post("/api/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
     if not request.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
     
-    # Simple echo/skeleton response for Phase 0
-    # In Phase 1, we will integrate Groq LLM tool-calling here
-    user_msg = request.message
-    bot_reply = f"Hello! I received your message: '{user_msg}'. My Groq brain is warming up!"
+    logger.info(f"Received message: {request.message}")
+    
+    # Query Groq LLM brain (handles tool call loops internally)
+    response_text = await query_brain(request.message)
+    
+    # Speak the response using Kokoro TTS in the background (non-blocking for API response)
+    if request.voice_enabled:
+        background_tasks.add_task(speak, response_text, "bf_isabella")
     
     return ChatResponse(
-        response=bot_reply,
+        response=response_text,
         session_id=request.session_id or "default-session"
     )
+
+@app.post("/api/speak")
+async def speak_endpoint(request: SpeakRequest, background_tasks: BackgroundTasks):
+    if not request.text.strip():
+        raise HTTPException(status_code=400, detail="Text cannot be empty")
+    
+    logger.info(f"Synthesizing text: {request.text[:30]}...")
+    background_tasks.add_task(speak, request.text, request.voice)
+    return {"status": "processing"}
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,4 +1,4 @@
-# 🤍 Lucy AI — Identity & Persona Specification (F.R.I.D.A.Y. Inspired)
+# 🤍 Lucy AI — Identity & Persona Specification
 
 This document defines the core identity, speaking style, vocabulary constraints, and emotional behavior of Lucy AI.
 
