@@ -7,6 +7,7 @@ from lucy.tools import registry
 
 # Import tools_impl to ensure they are registered with the registry
 import lucy.tools_impl
+import lucy.file_tools
 
 logger = logging.getLogger("lucy.brain")
 logging.basicConfig(level=logging.INFO)

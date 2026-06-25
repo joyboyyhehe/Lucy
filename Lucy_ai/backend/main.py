@@ -18,6 +18,20 @@ from lucy.voice import speak
 
 app = FastAPI(title="Lucy AI Backend", version="1.0.0")
 
+# Workspace Sandbox Setup
+WORKSPACE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "Lucy_workspace"))
+
+@app.on_event("startup")
+def initialize_workspace():
+    logger.info("Initializing Lucy local workspace directories...")
+    folders = ["notes", "downloads", "temp", "projects"]
+    for folder in folders:
+        path = os.path.join(WORKSPACE_DIR, folder)
+        if not os.path.exists(path):
+            os.makedirs(path)
+            logger.info(f"Created workspace subdirectory: {path}")
+    logger.info("Workspace initialization complete.")
+
 # Configure CORS
 # Tauri apps run on tauri.localhost or localhost:1420
 app.add_middleware(
