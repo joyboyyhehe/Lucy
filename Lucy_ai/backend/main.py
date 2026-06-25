@@ -71,7 +71,7 @@ async def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks)
     logger.info(f"Received message: {request.message}")
     
     # Query Groq LLM brain (handles tool call loops internally)
-    response_text = await query_brain(request.message)
+    response_text = await query_brain(request.message, user_id="prathap")
     
     # Speak the response using Kokoro TTS in the background (non-blocking for API response)
     if request.voice_enabled:
@@ -93,4 +93,5 @@ async def speak_endpoint(request: SpeakRequest, background_tasks: BackgroundTask
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

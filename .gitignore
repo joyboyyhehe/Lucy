@@ -63,3 +63,6 @@ Lucy_workspace/*
 
 # Codebase backups
 backup_lucy/
+
+# Firebase configuration credentials
+firebase_config.json

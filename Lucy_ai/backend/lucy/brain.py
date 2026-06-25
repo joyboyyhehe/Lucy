@@ -5,9 +5,11 @@ from typing import Dict, Any, List
 from groq import Groq
 from lucy.tools import registry
 
-# Import tools_impl to ensure they are registered with the registry
+# Import tools_impl and memory to ensure they are registered with the registry
 import lucy.tools_impl
 import lucy.file_tools
+import lucy.memory
+from lucy.memory import get_user_profile, get_context_memories
 
 logger = logging.getLogger("lucy.brain")
 logging.basicConfig(level=logging.INFO)
@@ -33,7 +35,7 @@ CORE PERSONA & BEHAVIOR RULES:
 You have access to local system tools. Always use them when required to answer or execute user intents.
 """
 
-async def query_brain(user_message: str, chat_history: List[Dict[str, Any]] = None) -> str:
+async def query_brain(user_message: str, chat_history: List[Dict[str, Any]] = None, user_id: str = "prathap") -> str:
     """Send user message to Groq, resolve any tool calls in a loop, and return the final text response.
     Implements a strict multi-step ReAct execution loop.
     """
@@ -43,8 +45,17 @@ async def query_brain(user_message: str, chat_history: List[Dict[str, Any]] = No
         logger.warning(str(e))
         return f"Error. {str(e)}"
 
+    # Fetch User Profile and Memories from Firestore
+    profile = get_user_profile(user_id)
+    user_name = profile.get("name", "User")
+    memories = get_context_memories(user_id)
+    memories_str = "\n".join(memories) if memories else "No memories recorded yet."
+
+    # Build F.R.I.D.A.Y. Prompt customized with user facts
+    customized_prompt = SYSTEM_PROMPT + f"\nUSER DETAILS:\n- Name: {user_name}\n\nUSER MEMORIES & PREFERENCES:\n{memories_str}\n"
+
     # Construct messages thread starting with system prompt
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": customized_prompt}]
     
     # Append conversation history
     if chat_history:
