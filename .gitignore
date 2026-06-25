@@ -60,3 +60,6 @@ Thumbs.db
 # Lucy local workspace sandbox files (ignore all user files, keep folder README)
 Lucy_workspace/*
 !Lucy_workspace/README.md
+
+# Codebase backups
+backup_lucy/
