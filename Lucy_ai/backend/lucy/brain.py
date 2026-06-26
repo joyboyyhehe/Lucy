@@ -10,6 +10,7 @@ import lucy.tools_impl
 import lucy.file_tools
 import lucy.memory
 from lucy.memory import get_user_profile, get_context_memories
+import lucy.vision_tools
 
 logger = logging.getLogger("lucy.brain")
 logging.basicConfig(level=logging.INFO)
@@ -88,9 +89,19 @@ async def query_brain(user_message: str, chat_history: List[Dict[str, Any]] = No
                 tool_choice="auto" if tools_schema else None,
                 temperature=0.2, # Lower temp for consistent tool calls and professional tone
             )
-        except Exception as e:
-            logger.error(f"Groq API failure: {str(e)}")
-            return f"Error. Groq communication failed: {str(e)}"
+        except Exception as primary_error:
+            logger.warning(f"Primary model llama-3.3-70b-versatile failed: {str(primary_error)}. Attempting fallback to llama-3.1-8b-instant...")
+            try:
+                response = client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=messages,
+                    tools=tools_schema if tools_schema else None,
+                    tool_choice="auto" if tools_schema else None,
+                    temperature=0.2,
+                )
+            except Exception as fallback_error:
+                logger.error(f"Groq API failure on fallback model: {str(fallback_error)}")
+                return f"Error. Groq communication failed: {str(primary_error)}"
 
         choice = response.choices[0]
         assistant_message = choice.message
